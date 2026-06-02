@@ -1,7 +1,17 @@
+import { jwtVerify } from "jose"
 import { NextRequest, NextResponse } from "next/server"
-import { verifySessionToken } from "./lib/auth"
 
 const publicPaths = ["/login", "/api/login"]
+
+function getSecret() {
+  const secret = process.env.JWT_SECRET
+
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured")
+  }
+
+  return new TextEncoder().encode(secret)
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -20,13 +30,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
-  const isValid = await verifySessionToken(token)
-
-  if (!isValid) {
-    return NextResponse.redirect(new URL("/login", request.url))
+  try {
+    await jwtVerify(token, getSecret())
+    return NextResponse.next()
+  } catch {
+    const response = NextResponse.redirect(new URL("/login", request.url))
+    response.cookies.delete("tesis_session")
+    return response
   }
-
-  return NextResponse.next()
 }
 
 export const config = {
