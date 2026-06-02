@@ -9,6 +9,48 @@ type TriangulationRow = {
   interpretation: string
 }
 
+type InterviewAnswerFromDb = {
+  id: string
+  finding: string | null
+}
+
+type InterviewFromDb = {
+  id: string
+  answers: InterviewAnswerFromDb[]
+}
+
+type ObservationActivityFromDb = {
+  id: string
+  delayType: string | null
+  waitingTime: number | null
+  reprocess: boolean
+  tool: string | null
+  cause: string | null
+  error: string | null
+}
+
+type ObservationFromDb = {
+  id: string
+  activities: ObservationActivityFromDb[]
+}
+
+type DocumentRecordFromDb = {
+  id: string
+  delayDetected: boolean
+  errorImpact: string | null
+  reprocess: boolean
+  mediumUsed: string | null
+  excessiveExcelEmailUse: boolean
+  validationType: string | null
+  detectedError: string | null
+  probableCause: string | null
+}
+
+type DocumentAnalysisFromDb = {
+  id: string
+  records: DocumentRecordFromDb[]
+}
+
 const findings = [
   {
     name: "Demoras documentarias",
@@ -49,34 +91,49 @@ function getCoincidence(count: number): TriangulationRow["coincidence"] {
   return "Sin evidencia"
 }
 
+function YesNoBadge({ value }: { value: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-sm font-bold ${
+        value
+          ? "bg-emerald-100 text-emerald-800"
+          : "bg-rose-100 text-rose-700"
+      }`}
+    >
+      {value ? "Sí" : "No"}
+    </span>
+  )
+}
+
 export default async function TriangulationPage() {
-  const interviews = await prisma.interview.findMany({
+  const interviews: InterviewFromDb[] = await prisma.interview.findMany({
     include: {
       answers: true,
     },
   })
 
-  const observations = await prisma.observation.findMany({
+  const observations: ObservationFromDb[] = await prisma.observation.findMany({
     include: {
       activities: true,
     },
   })
 
-  const analyses = await prisma.documentAnalysis.findMany({
-    include: {
-      records: true,
-    },
-  })
+  const analyses: DocumentAnalysisFromDb[] =
+    await prisma.documentAnalysis.findMany({
+      include: {
+        records: true,
+      },
+    })
 
   const rows: TriangulationRow[] = findings.map((finding) => {
-    const interview = interviews.some((interviewItem) =>
+    const interview = interviews.some((interviewItem: InterviewFromDb) =>
       interviewItem.answers.some(
-        (answer) => answer.finding === finding.name
+        (answer: InterviewAnswerFromDb) => answer.finding === finding.name
       )
     )
 
-    const observation = observations.some((observationItem) =>
-      observationItem.activities.some((activity) => {
+    const observation = observations.some((observationItem: ObservationFromDb) =>
+      observationItem.activities.some((activity: ObservationActivityFromDb) => {
         if (finding.name === "Demoras documentarias") {
           return Boolean(activity.delayType || activity.waitingTime)
         }
@@ -105,10 +162,13 @@ export default async function TriangulationPage() {
       })
     )
 
-    const documentAnalysis = analyses.some((analysisItem) =>
-      analysisItem.records.some((record) => {
+    const documentAnalysis = analyses.some((analysisItem: DocumentAnalysisFromDb) =>
+      analysisItem.records.some((record: DocumentRecordFromDb) => {
         if (finding.name === "Demoras documentarias") {
-          return record.delayDetected || record.errorImpact === "Demora en aprobación"
+          return (
+            record.delayDetected ||
+            record.errorImpact === "Demora en aprobación"
+          )
         }
 
         if (finding.name === "Reprocesos") {
@@ -116,10 +176,7 @@ export default async function TriangulationPage() {
         }
 
         if (finding.name === "Uso excesivo de Excel") {
-          return (
-            record.mediumUsed === "Excel" ||
-            record.excessiveExcelEmailUse
-          )
+          return record.mediumUsed === "Excel" || record.excessiveExcelEmailUse
         }
 
         if (finding.name === "Validaciones manuales") {
@@ -191,40 +248,14 @@ export default async function TriangulationPage() {
                     {row.finding}
                   </td>
                   <td className="p-4">
-  <span
-    className={`rounded-full px-3 py-1 text-sm font-bold ${
-      row.interview
-        ? "bg-emerald-100 text-emerald-800"
-        : "bg-rose-100 text-rose-700"
-    }`}
-  >
-    {row.interview ? "Sí" : "No"}
-  </span>
-</td>
-
-<td className="p-4">
-  <span
-    className={`rounded-full px-3 py-1 text-sm font-bold ${
-      row.observation
-        ? "bg-emerald-100 text-emerald-800"
-        : "bg-rose-100 text-rose-700"
-    }`}
-  >
-    {row.observation ? "Sí" : "No"}
-  </span>
-</td>
-
-<td className="p-4">
-  <span
-    className={`rounded-full px-3 py-1 text-sm font-bold ${
-      row.documentAnalysis
-        ? "bg-emerald-100 text-emerald-800"
-        : "bg-rose-100 text-rose-700"
-    }`}
-  >
-    {row.documentAnalysis ? "Sí" : "No"}
-  </span>
-</td>
+                    <YesNoBadge value={row.interview} />
+                  </td>
+                  <td className="p-4">
+                    <YesNoBadge value={row.observation} />
+                  </td>
+                  <td className="p-4">
+                    <YesNoBadge value={row.documentAnalysis} />
+                  </td>
                   <td className="p-4">
                     <span className="rounded-full bg-cyan-100 px-3 py-1 text-sm font-bold text-cyan-800">
                       {row.coincidence}
@@ -238,42 +269,6 @@ export default async function TriangulationPage() {
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-black text-slate-900">
-          Criterio de interpretación
-        </h2>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="font-black text-slate-900">Alta</p>
-            <p className="mt-1 text-sm text-slate-600">
-              El hallazgo aparece en los tres instrumentos.
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="font-black text-slate-900">Media</p>
-            <p className="mt-1 text-sm text-slate-600">
-              El hallazgo aparece en dos instrumentos.
-            </p>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="font-black text-slate-900">Baja</p>
-            <p className="mt-1 text-sm text-slate-600">
-              El hallazgo aparece en un solo instrumento.
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-5 text-sm leading-6 text-slate-600">
-          La triangulación metodológica permite verificar si un problema aparece
-          en más de una fuente de información. Cuando un hallazgo se evidencia en
-          entrevista, observación y análisis documental, presenta mayor
-          consistencia para la interpretación del proceso documentario.
-        </p>
       </section>
     </main>
   )
