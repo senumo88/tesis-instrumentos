@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Interview {
+  id String @id @default(cuid())
+
+  code String?
+  date DateTime?
+
+  area        String?
+  position    String?
+  interviewee String?
+
+  durationMinutes Int?
+  generalNotes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers InterviewAnswer[]
+}
+
+model InterviewAnswer {
+  id String @id @default(cuid())
+
+  interviewId String
+  interview   Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  questionNumber Int
+  category       String?
+  objective      String?
+  question       String
+  answer         String?
+
+  finding  String?
+  evidence String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Observation {
+  id String @id @default(cuid())
+
+  code String?
+  date DateTime?
+
+  area        String?
+  responsible String?
+
+  startTime String?
+  endTime   String?
+
+  generalResult String?
+
+  createdAt DateTime @default(now())
+
+  activities ObservationActivity[]
+}
+
+model ObservationActivity {
+  id String @id @default(cuid())
+
+  observationId String
+  observation   Observation @relation(fields: [observationId], references: [id], onDelete: Cascade)
+
+  previousActivity String?
+  currentActivity  String?
+  nextActivity     String?
+
+  responsible String?
+
+  document String?
+
+  tool String?
+
+  timeSpent Int?
+
+  waitingTime Int?
+
+  error String?
+
+  cause String?
+
+  reprocess Boolean @default(false)
+
+  duplicated Boolean @default(false)
+
+  noValue Boolean @default(false)
+
+  delayType String?
+
+  automationOpportunity String?
+
+  notes String?
+}
+
+model DocumentAnalysis {
+  id String @id @default(cuid())
+
+  code          String?
+  date          DateTime?
+  area          String?
+  responsible   String?
+  generalResult String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  records DocumentRecord[]
+}
+
+model DocumentRecord {
+  id String @id @default(cuid())
+
+  analysisId String
+  analysis   DocumentAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  documentName    String?
+  documentType    String?
+  processStage    String?
+  areaResponsible String?
+  purpose         String?
+  mediumUsed      String?
+
+  detectedError String?
+  probableCause String?
+  errorImpact   String?
+
+  validationType      String?
+  validationsRequired Int?
+
+  reprocess              Boolean @default(false)
+  duplicated             Boolean @default(false)
+  repetitiveValidation   Boolean @default(false)
+  delayDetected          Boolean @default(false)
+  excessiveExcelEmailUse Boolean @default(false)
+
+  documentValue String?
+
+  automatable               Boolean @default(false)
+  technologicalRequirement  String?
+  digitalizationOpportunity String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
